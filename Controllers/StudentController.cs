@@ -1,25 +1,28 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using MVCformNupat.Data;
 using MVCformNupat.Model;
+using MVCformNupat.Repository;
 using System.Security.Principal;
 
 namespace MVCformNupat.Controllers
 {
     public class StudentController : Controller
     {
-        private readonly AppDbContext _ctx;
-
-        public StudentController(AppDbContext context)
+        private readonly IRepository _repo;
+        public StudentController(IRepository repository)
         {
-            _ctx = context;
+            _repo = repository;
         }
 
+        [Authorize]
         public IActionResult Index()
         {
-            IEnumerable<Student> students = _ctx.Students;
-            return View(students);
+            var student = _repo.GetAllStudent();
+            return View(student);
         }
 
+        [Authorize(Roles ="User")]
         public IActionResult Create()
         {
             return View();
@@ -28,75 +31,39 @@ namespace MVCformNupat.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(Student student)
         {
-            if(ModelState.IsValid)
-            {
-                _ctx.Students.Add(student);
-                await _ctx.SaveChangesAsync();
-
-                return RedirectToAction("index");
-            }
-            return View(student);
+            _repo.Add(student);
+            await _repo.SaveAsync();
+            return RedirectToAction("index");
         }
 
-        public IActionResult Update(int?id)
+        public IActionResult Update(int id)
         {
-            if(id == null || id == 0)
-            {
-                return NotFound();
-            }
-
-            var user = _ctx.Students.Find(id);
-            if(user != null)
-            {
-                return View(user);
-            }
-            return NotFound();
+            var student = _repo.GetById(id);
+            return View(student);
         }
 
         [HttpPost]
         public async Task<IActionResult> Update(Student student)
         {
-            if(ModelState.IsValid)
-            {
-                _ctx.Students.Update(student);
-                await _ctx.SaveChangesAsync();
-                return RedirectToAction("index");
-            }
-            else
-            {
-                return View(student);
-            }            
+            _repo.Update(student);
+            await _repo.SaveAsync();
+            return RedirectToAction("index");
         }
 
-        public IActionResult Delete(int? id)
+        public IActionResult Delete(int id)
         {
-            if(id == null)
-            {
-                return NotFound();
-            }
-            var user = _ctx.Students.Find(id);
-            if (user != null)
-            {
-                return View(user);
-            }
-            return NotFound();
+            var student = _repo.GetById(id);
+            return View(student);
 
         }
 
         [HttpPost]
-        public async Task<IActionResult> DeletePost(int? id)
+        public async Task<IActionResult> DeletePost(Student student)
         {
-            var user = _ctx.Students.Find(id);
-            if (user != null)
-            {
-                _ctx.Students.Remove(user);
-                await _ctx.SaveChangesAsync();
-                return RedirectToAction("index");
-            }
-            return NotFound();
-
+            _repo.Delete(student);
+            await _repo.SaveAsync();
+            return RedirectToAction("index");
         }
-
 
     }
 }
